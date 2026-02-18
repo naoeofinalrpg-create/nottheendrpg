@@ -1,0 +1,6 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- Green hexagon -->
+  <polygon points="32,4 54,18 54,46 32,60 10,46 10,18"
+           fill="#16A34A" stroke="#14532D" stroke-width="2"/>
+  <text x="32" y="36" font-size="24" fill="white" text-anchor="middle">☺</text>
+</svg>

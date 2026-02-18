@@ -1,0 +1,8 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Simple bag placeholder -->
+  <path d="M 50 60 L 50 180 Q 50 190 60 190 L 140 190 Q 150 190 150 180 L 150 60 Q 150 50 140 50 L 60 50 Q 50 50 50 60 Z"
+        fill="#8B7355" stroke="#654321" stroke-width="2"/>
+  <ellipse cx="100" cy="60" rx="50" ry="15" fill="#654321"/>
+  <text x="100" y="130" font-size="12" fill="white" text-anchor="middle">Saquinho</text>
+  <text x="100" y="145" font-size="10" fill="white" text-anchor="middle">de Teste</text>
+</svg>
