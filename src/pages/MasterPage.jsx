@@ -37,7 +37,9 @@ export default function MasterPage() {
 
   const handleApplyTest = async (difficulty, helpers) => {
     if (!selectedSheet) return
-    await testService.applyTest(selectedSheet.playerName, difficulty, helpers)
+    // Check if the player has a complication (red) hex placed on their Confusion slot
+    const hasConfusionComplication = selectedSheet?.placedHexes?.confusion?.color === 'red'
+    await testService.applyTest(selectedSheet.playerName, difficulty, helpers, hasConfusionComplication)
   }
 
   const handleShuffle = async () => {

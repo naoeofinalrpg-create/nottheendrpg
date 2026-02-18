@@ -2,6 +2,7 @@ import { useState } from 'react'
 import saquinhoImg from '../assets/saquinhoteste.png'
 import redHexImg from '../assets/complicacaovermelho.png'
 import greenHexImg from '../assets/sucessoverde.png'
+import grayHexImg from '../assets/cinzaconfuso.png'
 
 const DIFFICULTY_OPTIONS = [
   { label: 'Muito Fácil', value: 'muito-facil', redHexes: 1 },
@@ -48,13 +49,30 @@ export default function TestSystem({
     )
   }
 
-  // Potential helpers are all players EXCEPT the test target player (currentPlayerName when isMaster)
   const potentialHelpers = allPlayerNames.filter(n => n !== currentPlayerName)
 
   const isTestTarget = activeTest && activeTest.playerName === currentPlayerName
   const isHelper = activeTest && activeTest.helpers?.includes(currentPlayerName)
   const isPlayerInTest = (isTestTarget || isHelper) && !isMaster
   const canDraw = isTestTarget && !isMaster
+
+  // Only the test target player can drag their drawn hexes to the sheet
+  const canDragDrawn = isTestTarget && !isMaster
+
+  // Bag counts — hidden hexes not revealed to player
+  const visibleRed = activeTest
+    ? (isMaster
+        ? activeTest.hexes.filter(h => h.color === 'red' && !h.drawn).length
+        : activeTest.hexes.filter(h => h.color === 'red' && !h.drawn && !h.hidden).length)
+    : 0
+  const visibleGreen = activeTest
+    ? (isMaster
+        ? activeTest.hexes.filter(h => h.color === 'green' && !h.drawn).length
+        : activeTest.hexes.filter(h => h.color === 'green' && !h.drawn && !h.hidden).length)
+    : 0
+  const hiddenCount = activeTest && !isMaster
+    ? activeTest.hexes.filter(h => h.hidden && !h.drawn).length
+    : 0
 
   return (
     <div className="relative">
@@ -99,7 +117,6 @@ export default function TestSystem({
               Aplicar Teste
             </h2>
 
-            {/* Difficulty */}
             <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-1.5">
               Dificuldade
             </label>
@@ -116,7 +133,6 @@ export default function TestSystem({
               ))}
             </select>
 
-            {/* Helpers */}
             {potentialHelpers.length > 0 && (
               <div className="mb-5">
                 <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-2">
@@ -181,12 +197,11 @@ export default function TestSystem({
         </div>
       )}
 
-      {/* Test Display - appears on the right side */}
+      {/* Test Display */}
       {activeTest && (
         <div className="fixed right-4 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center gap-4">
           {/* Bag with hexes */}
           <div className="relative">
-            {/* Bag image */}
             <img
               src={saquinhoImg}
               alt="Saquinho de teste"
@@ -195,14 +210,13 @@ export default function TestSystem({
             />
 
             {/* Hex counter */}
-            <div className="absolute top-2 right-2 bg-panel/90 border border-border-purple rounded-full px-3 py-1 neon-glow-sm">
-              <span className="text-sm font-bold text-danger">
-                {activeTest.hexes.filter(h => h.color === 'red').length}
-              </span>
-              <span className="text-xs text-text-muted mx-1">/</span>
-              <span className="text-sm font-bold text-emerald-neon">
-                {activeTest.hexes.filter(h => h.color === 'green').length}
-              </span>
+            <div className="absolute top-2 right-2 bg-panel/90 border border-border-purple rounded-full px-3 py-1 neon-glow-sm flex items-center gap-1">
+              <span className="text-sm font-bold text-danger">{visibleRed}</span>
+              <span className="text-xs text-text-muted">/</span>
+              <span className="text-sm font-bold text-emerald-neon">{visibleGreen}</span>
+              {hiddenCount > 0 && (
+                <span className="text-xs text-text-muted ml-0.5">+{hiddenCount}?</span>
+              )}
             </div>
 
             {/* Animating hexes entering bag */}
@@ -210,7 +224,7 @@ export default function TestSystem({
               !hex.drawn && (
                 <img
                   key={hex.id}
-                  src={hex.color === 'red' ? redHexImg : greenHexImg}
+                  src={hex.hidden && !isMaster ? grayHexImg : (hex.color === 'red' ? redHexImg : greenHexImg)}
                   alt={`${hex.color} hex`}
                   className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 opacity-0 animate-enter-bag pointer-events-none"
                   style={{ animationDelay: `${index * 0.15}s` }}
@@ -238,24 +252,50 @@ export default function TestSystem({
             </button>
           )}
 
-          {/* Drawn hexes queue */}
+          {/* Drawn hexes — draggable for the test target */}
           {activeTest.drawnHexes.length > 0 && (
             <div className="grid grid-cols-5 gap-2">
-              {activeTest.drawnHexes.map((hex, index) => (
-                <div key={`drawn-${index}`} className="flex flex-col items-center gap-0.5">
-                  <img
-                    src={hex.color === 'red' ? redHexImg : greenHexImg}
-                    alt={`${hex.color} hex`}
-                    className="w-16 h-16 object-contain animate-fade-in"
-                    style={{ animationDelay: `${index * 0.1}s`, filter: 'drop-shadow(0 0 8px rgba(124,58,237,0.3))' }}
-                  />
-                  {hex.label && (
-                    <span className="text-[8px] text-danger font-semibold text-center leading-tight max-w-[4rem] break-words">
-                      {hex.label}
-                    </span>
-                  )}
-                </div>
-              ))}
+              {activeTest.drawnHexes.map((hex, index) => {
+                // Green hexes and plain red hexes (no label) are draggable for the test target
+                const isDraggable = canDragDrawn && (
+                  hex.color === 'green' || (hex.color === 'red' && !hex.label)
+                )
+
+                const handleDragStart = (e) => {
+                  e.dataTransfer.setData('hex-data', JSON.stringify(hex))
+                  e.dataTransfer.effectAllowed = 'move'
+                }
+
+                return (
+                  <div
+                    key={`drawn-${index}`}
+                    className={`flex flex-col items-center gap-0.5 ${isDraggable ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                    draggable={isDraggable}
+                    onDragStart={isDraggable ? handleDragStart : undefined}
+                  >
+                    <img
+                      src={hex.color === 'red' ? redHexImg : greenHexImg}
+                      alt={`${hex.color} hex`}
+                      className="w-16 h-16 object-contain animate-fade-in"
+                      style={{
+                        animationDelay: `${index * 0.1}s`,
+                        filter: 'drop-shadow(0 0 8px rgba(124,58,237,0.3))',
+                        opacity: isDraggable ? 1 : 0.85,
+                      }}
+                    />
+                    {hex.label && (
+                      <span className="text-[8px] text-danger font-semibold text-center leading-tight max-w-[4rem] break-words">
+                        {hex.label}
+                      </span>
+                    )}
+                    {isDraggable && (
+                      <span className="text-[7px] text-text-muted text-center leading-tight opacity-60">
+                        arrastar
+                      </span>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>

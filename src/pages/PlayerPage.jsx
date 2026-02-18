@@ -21,7 +21,6 @@ export default function PlayerPage() {
       }
       setLoading(false)
     })
-
     return () => unsubscribe()
   }, [user.name])
 
@@ -40,14 +39,43 @@ export default function PlayerPage() {
     }, 1000)
   }
 
+  const isTestTarget = activeTest && activeTest.playerName === user.name
   const canClickHexes = activeTest && !activeTest.shuffled &&
     (activeTest.playerName === user.name || activeTest.helpers?.includes(user.name))
-
   const canClickMisfortune = activeTest && !activeTest.shuffled && activeTest.playerName === user.name
+  const canDragToSheet = isTestTarget
 
-  const handleHexClick = async () => {
+  // Click a grid hex: adds 1 green hex normally, or 2 + consumes placed bonus hex
+  const handleHexClick = async (posKey) => {
     if (!canClickHexes) return
-    await testService.addGreenHex(activeTest)
+    const placedHex = isTestTarget ? (sheet?.placedHexes?.[posKey] || null) : null
+    if (placedHex?.color === 'green') {
+      await testService.addGreenHexDouble(activeTest)
+      const newPlacedHexes = { ...(sheet?.placedHexes || {}), [posKey]: null }
+      handleUpdate({ ...sheet, placedHexes: newPlacedHexes })
+    } else {
+      await testService.addGreenHex(activeTest)
+    }
+  }
+
+  // Drop a green hex from drawn list onto a grid position
+  const handleHexDrop = async (posKey, hex) => {
+    const newPlacedHexes = { ...(sheet?.placedHexes || {}), [posKey]: { id: hex.id, color: hex.color } }
+    handleUpdate({ ...sheet, placedHexes: newPlacedHexes })
+    await testService.removeFromDrawn(activeTest, hex.id)
+  }
+
+  // Drop a red hex from drawn list onto confusion or adrenaline
+  const handleFlatHexDrop = async (target, hex) => {
+    const newPlacedHexes = { ...(sheet?.placedHexes || {}), [target]: { id: hex.id, color: hex.color } }
+    handleUpdate({ ...sheet, placedHexes: newPlacedHexes })
+    await testService.removeFromDrawn(activeTest, hex.id)
+  }
+
+  // Remove a hex placed on confusion or adrenaline
+  const handleRemovePlacedFlatHex = (target) => {
+    const newPlacedHexes = { ...(sheet?.placedHexes || {}), [target]: null }
+    handleUpdate({ ...sheet, placedHexes: newPlacedHexes })
   }
 
   const handleMisfortuneClick = async (misfortune) => {
@@ -101,6 +129,9 @@ export default function PlayerPage() {
           playerName={user.name}
           activeTest={activeTest}
           onHexClick={canClickHexes ? handleHexClick : null}
+          onHexDrop={canDragToSheet ? handleHexDrop : null}
+          onFlatHexDrop={canDragToSheet ? handleFlatHexDrop : null}
+          onRemovePlacedFlatHex={handleRemovePlacedFlatHex}
           onMisfortuneClick={canClickMisfortune ? handleMisfortuneClick : null}
         />
       </main>
