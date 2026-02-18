@@ -50,6 +50,12 @@ export const localStorageService = {
     return newSheet
   },
 
+  deleteSheet(playerName) {
+    const sheets = this.getAllSheets().filter(s => s.playerName !== playerName)
+    localStorage.setItem(STORAGE_KEYS.SHEETS, JSON.stringify(sheets))
+    triggerStorageEvent(STORAGE_KEYS.SHEETS, sheets)
+  },
+
   subscribeToSheets(callback) {
     // Initial call
     callback(this.getAllSheets())

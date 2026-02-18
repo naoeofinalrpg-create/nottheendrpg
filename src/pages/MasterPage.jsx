@@ -4,7 +4,7 @@ import CharacterSheet from '../components/CharacterSheet'
 import ThemeToggle from '../components/ThemeToggle'
 import TestSystem from '../components/TestSystem'
 import StorageIndicator from '../components/StorageIndicator'
-import { subscribeToSheets, saveSheet } from '../services/sheetService'
+import { subscribeToSheets, saveSheet, deleteSheet } from '../services/sheetService'
 import { testService } from '../services/testService'
 
 export default function MasterPage() {
@@ -13,6 +13,7 @@ export default function MasterPage() {
   const [loading, setLoading] = useState(true)
   const [selectedSheet, setSelectedSheet] = useState(null)
   const [activeTest, setActiveTest] = useState(null)
+  const [sheetToDelete, setSheetToDelete] = useState(null)
 
   useEffect(() => {
     const unsubscribe = subscribeToSheets((data) => {
@@ -62,6 +63,13 @@ export default function MasterPage() {
     await saveSheet(selectedSheet.playerName, updated)
   }
 
+  const handleDeleteSheet = async () => {
+    if (!sheetToDelete) return
+    if (selectedSheet?.playerName === sheetToDelete.playerName) setSelectedSheet(null)
+    await deleteSheet(sheetToDelete.playerName)
+    setSheetToDelete(null)
+  }
+
   const allPlayerNames = sheets.map(s => s.playerName)
 
   return (
@@ -100,19 +108,58 @@ export default function MasterPage() {
             {/* Sheet list */}
             <div className="flex flex-wrap gap-3 mb-6">
               {sheets.map((s) => (
-                <button
-                  key={s.id}
-                  onClick={() => setSelectedSheet(selectedSheet?.id === s.id ? null : s)}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 text-sm ${
-                    selectedSheet?.id === s.id
-                      ? 'btn-neon'
-                      : 'btn-ghost'
-                  }`}
-                >
-                  {s.playerName}
-                </button>
+                <div key={s.id} className="flex items-center gap-1">
+                  <button
+                    onClick={() => setSelectedSheet(selectedSheet?.id === s.id ? null : s)}
+                    className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 text-sm ${
+                      selectedSheet?.id === s.id
+                        ? 'btn-neon'
+                        : 'btn-ghost'
+                    }`}
+                  >
+                    {s.playerName}
+                  </button>
+                  <button
+                    onClick={() => setSheetToDelete(s)}
+                    className="p-1.5 rounded-lg text-danger hover:bg-danger/10 transition-all duration-200"
+                    title="Excluir ficha"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
               ))}
             </div>
+
+            {/* Delete confirmation modal */}
+            {sheetToDelete && (
+              <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
+                <div className="glass-panel neon-border rounded-2xl p-6 max-w-sm w-full mx-4 animate-fade-in">
+                  <h2 className="text-lg font-bold text-text-primary mb-2 text-center">Excluir Ficha</h2>
+                  <p className="text-sm text-text-muted text-center mb-6">
+                    Tem certeza que deseja excluir a ficha de{' '}
+                    <span className="text-danger font-semibold">{sheetToDelete.playerName}</span>?
+                    Essa ação não pode ser desfeita.
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleDeleteSheet}
+                      className="flex-1 px-4 py-2.5 rounded-lg font-semibold text-sm text-white transition-all duration-300"
+                      style={{ background: 'linear-gradient(135deg, #DC2626, #EF4444)', boxShadow: '0 0 12px rgba(239,68,68,0.3)' }}
+                    >
+                      Excluir
+                    </button>
+                    <button
+                      onClick={() => setSheetToDelete(null)}
+                      className="flex-1 px-4 py-2.5 btn-ghost rounded-lg font-semibold text-sm"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Selected sheet view */}
             {selectedSheet && (

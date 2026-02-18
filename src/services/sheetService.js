@@ -5,6 +5,7 @@ import {
   getDoc,
   getDocs,
   setDoc,
+  deleteDoc,
   onSnapshot,
   query,
   orderBy,
@@ -54,6 +55,14 @@ export async function saveSheet(playerName, data) {
   }
   const docRef = doc(db, COLLECTION, playerName.toLowerCase())
   await setDoc(docRef, { ...data, playerName, updatedAt: Date.now() })
+}
+
+export async function deleteSheet(playerName) {
+  if (!USE_FIREBASE) {
+    localStorageService.deleteSheet(playerName)
+    return
+  }
+  await deleteDoc(doc(db, COLLECTION, playerName.toLowerCase()))
 }
 
 export function subscribeToSheets(callback) {
